@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  core-server:
+    build:
+      context: ./core-server
+      dockerfile: Dockerfile
+    volumes:
+      - ./core-server:/core-server
+    command: "pnpm start"
+    ports:
+      - "8080:8080"
