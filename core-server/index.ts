@@ -2,44 +2,13 @@ import * as line from "@line/bot-sdk";
 import express, { Request } from "express";
 import { load } from "ts-dotenv";
 
-import { v4 as uuidv4 } from "uuid";
 import dbConfig from "./db-config";
 import User from "./entities/user";
 
-const uniqueId = uuidv4();
-
-const userRepository = dbConfig.getRepository(User);
-
-// !todo: ここのuniqueIdはLINEのuserIdになる
-const newUser = new User(uniqueId);
-const savedUser = await userRepository.save(newUser);
-console.log("Saved:", savedUser);
-
-const allUsers = await userRepository.find();
-console.log("Select:", allUsers);
-
-// https://developers.line.biz/ja/docs/messaging-api/receiving-messages/#webhook-event-in-one-on-one-talk-or-group-chat
-interface LineWebhookEvent {
-  type: "message" | "unsend" | "follow";
-  message?: {
-    type: "text";
-    id: string;
-    text: string;
-  };
-  unsend?: {
-    messageId: string;
-  };
-  webhookEventId: string;
-  deliveryContext: {
-    isRedelivery: boolean;
-  };
-  timestamp: number;
-  source: {
-    type: "user";
-    userId: string;
-  };
-  replyToken: string;
-}
+import fs from "fs";
+import Spot from "./entities/spot";
+import UserSpot from "./entities/userspot";
+import { Spots } from "./types";
 
 const env = load({
   CHANNEL_SECRET: String,
@@ -83,7 +52,7 @@ app.post(
     // https://developers.line.biz/ja/docs/messaging-api/receiving-messages/
 
     // !!debug
-    console.log(req.body);
+    console.log("RECIVED", req.body);
     if (!req.headers["x-line-signature"] || !req.rawBody) return;
 
     // 署名検証
@@ -99,14 +68,72 @@ app.post(
     }
 
     // 到着したイベントのevents配列から取りだし
-    req.body.events.forEach(async (event: LineWebhookEvent) => {
+    req.body.events.forEach(async (event: line.WebhookEvent) => {
       switch (event.type) {
+        case "follow":
+          const userRepository = dbConfig.getRepository(User);
+
+          if (!event.source.userId) return;
+          const userId = event.source.userId;
+
+          //
+          // ユーザーをデータベースに登録
+          //
+          const newUser = new User(userId);
+
+          const savedUser = await userRepository.save(newUser);
+          console.log("Saved:", savedUser);
+
+          // !debug-info
+          const allUsers = await userRepository.find();
+          console.log("Select:", allUsers);
+
+          //
+          // 事前ファイルからスポットの情報を読み込む
+          //
+          const json = JSON.parse(
+            fs.readFileSync("assets/dev_spots.json", "utf8")
+          );
+          const spots: Spots = json.spots;
+
+          const spotRepository = dbConfig.getRepository(Spot);
+          const userspotRepository = dbConfig.getRepository(UserSpot);
+          Promise.all(
+            spots.map(async (spot) => {
+              //
+              // スポットの情報をデータベースに書き込む
+              //
+              const newSpot = new Spot(spot.name, spot.desc, spot.moredesc);
+              const savedSpot = await spotRepository.save(newSpot);
+              console.log("Saved:", savedSpot);
+
+              //
+              // ユーザーとスポットの情報を合わせたテーブルも用意
+              //
+              const newUserSpot = new UserSpot(
+                userId,
+                newSpot.id ?? "",
+                null,
+                null
+              );
+              const savedUserSpot = await userspotRepository.save(newUserSpot);
+              console.log("Saved:", savedUserSpot);
+            })
+            // !debug-info
+          ).then(async () =>
+            console.log("Select:", await spotRepository.find())
+          );
+          break;
         case "message": // event.typeがmessageのとき応答
-          // 頭に　返信: をつけて、そのまま元のメッセージを返す実装
-          await client.replyMessage(event.replyToken, {
-            type: "text",
-            text: `返信: ${event.message?.text}`,
-          });
+          switch (event.message.type) {
+            // 頭に　返信: をつけて、そのまま元のメッセージを返す実装
+            case "text":
+              await client.replyMessage(event.replyToken, {
+                type: "text",
+                text: `返信: ${event.message.text}`,
+              });
+              break;
+          }
           break;
       }
     });
