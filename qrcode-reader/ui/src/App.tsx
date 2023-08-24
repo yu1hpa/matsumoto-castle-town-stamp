@@ -12,26 +12,10 @@ function App() {
     });
   };
 
-  /*
-  useEffect(() => {
-    liff
-      .init({
-        liffId: import.meta.env.VITE_LIFF_ID
-      })
-      .then(() => {
-        console.log("LIFF init succeeded.");
-      })
-      .catch((e: Error) => {
-        console.error(`LIFF init failed.${e}`);
-      });
-  });
-  */
-
   return (
     <div className="App">
       <button onClick={handleScan}>Scan QR Code</button>
-      <p>{qrCodeData}</p>
-      <h1>aaa</h1>
+      <h1>{qrCodeData}</h1>
     </div>
   );
 }
