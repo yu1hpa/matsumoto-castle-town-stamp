@@ -8,10 +8,16 @@ import {
 
 @Entity()
 export default class UserSpot {
-  constructor(userId: string, spotId: string, imgFileName: string) {
+  constructor(
+    userId: string,
+    spotId: string,
+    imgFileName: string | null,
+    visitedAt: Date | null
+  ) {
     this.userId = userId;
     this.spotId = spotId;
     this.imgFileName = imgFileName;
+    this.visitedAt = visitedAt;
   }
   @PrimaryGeneratedColumn("uuid")
   public id: string | undefined;
@@ -22,11 +28,11 @@ export default class UserSpot {
   @Column({ type: "varchar" })
   public userId: string;
 
-  @Column({ type: "varchar" })
-  public imgFileName: string;
+  @Column({ nullable: true, type: "varchar" })
+  public imgFileName: string | null;
 
-  @Column({ type: "timestamp" })
-  public visitedAt: Date | undefined;
+  @Column({ nullable: true, type: "timestamp" })
+  public visitedAt: Date | null;
 
   @CreateDateColumn({ name: "created_at", type: "timestamp", precision: 0 })
   readonly createdAt = new Date();
