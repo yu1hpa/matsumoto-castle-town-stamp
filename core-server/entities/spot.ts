@@ -2,19 +2,20 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   UpdateDateColumn,
 } from "typeorm";
 
 @Entity()
 export default class Spot {
-  constructor(name: string, desc: string, moredesc: string) {
+  constructor(id: string, name: string, desc: string, moredesc: string) {
+    this.id = id;
     this.name = name;
     this.desc = desc;
     this.moredesc = moredesc;
   }
-  @PrimaryGeneratedColumn("uuid")
-  public id: string | undefined;
+  @PrimaryColumn()
+  public id: string;
 
   @Column({ type: "varchar", length: 30 })
   public name: string;
