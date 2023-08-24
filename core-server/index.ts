@@ -1,7 +1,22 @@
-import crypto from "crypto";
-import express, { Request, Response } from "express";
+import * as line from "@line/bot-sdk";
+import express, { Request } from "express";
 import { load } from "ts-dotenv";
-import { LineApi } from "./line-api";
+
+import { v4 as uuidv4 } from "uuid";
+import dbConfig from "./db-config";
+import User from "./entities/user";
+
+const uniqueId = uuidv4();
+
+const userRepository = dbConfig.getRepository(User);
+
+// !todo: ここのuniqueIdはLINEのuserIdになる
+const newUser = new User(uniqueId);
+const savedUser = await userRepository.save(newUser);
+console.log("Saved:", savedUser);
+
+const allUsers = await userRepository.find();
+console.log("Select:", allUsers);
 
 // https://developers.line.biz/ja/docs/messaging-api/receiving-messages/#webhook-event-in-one-on-one-talk-or-group-chat
 interface LineWebhookEvent {
@@ -47,7 +62,13 @@ app.use(
 
 app.listen(8080);
 
-const lineApi = new LineApi(env.CHANNEL_ACCESS_TOKEN);
+//const lineApi = new LineApi(env.CHANNEL_ACCESS_TOKEN);
+const config = {
+  channelAccessToken: env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: env.CHANNEL_SECRET,
+};
+
+const client = new line.Client(config);
 
 // ルートのエンドポイント定義
 app.get("/", (request, response) => {
@@ -55,55 +76,41 @@ app.get("/", (request, response) => {
 });
 
 // webhookを受け取るエンドポイント
-app.post("/webhook", (request: CustomRequest, response: Response, buf) => {
-  // https://developers.line.biz/ja/docs/messaging-api/receiving-messages/
+app.post(
+  "/webhook",
+  line.middleware(config),
+  (req: CustomRequest, response) => {
+    // https://developers.line.biz/ja/docs/messaging-api/receiving-messages/
 
-  const body = request.body;
+    // !!debug
+    console.log(req.body);
+    if (!req.headers["x-line-signature"] || !req.rawBody) return;
 
-  // !!debug
-  console.log(body);
-
-  // 署名検証
-  if (
-    !verifySignature(
-      request.rawBody,
-      request.headers["x-line-signature"],
-      env.CHANNEL_SECRET
-    )
-  ) {
-    response.status(401).send({});
-    return;
-  }
-
-  // 到着したイベントのevents配列から取りだし
-  body.events.forEach(async (event: LineWebhookEvent) => {
-    switch (event.type) {
-      case "message": // event.typeがmessageのとき応答
-        // 頭に　返信: をつけて、そのまま元のメッセージを返す実装
-        await lineApi.replyMessage(
-          event.replyToken,
-          `返信: ${event.message?.text}`
-        );
-        break;
+    // 署名検証
+    if (
+      !line.validateSignature(
+        req.rawBody,
+        env.CHANNEL_SECRET,
+        req.headers["x-line-signature"] as string
+      )
+    ) {
+      response.status(401).send({});
+      return;
     }
-  });
 
-  response.status(200).send({});
-});
+    // 到着したイベントのevents配列から取りだし
+    req.body.events.forEach(async (event: LineWebhookEvent) => {
+      switch (event.type) {
+        case "message": // event.typeがmessageのとき応答
+          // 頭に　返信: をつけて、そのまま元のメッセージを返す実装
+          await client.replyMessage(event.replyToken, {
+            type: "text",
+            text: `返信: ${event.message?.text}`,
+          });
+          break;
+      }
+    });
 
-// webhookの署名検証
-// https://developers.line.biz/ja/reference/messaging-api/#signature-validation
-function verifySignature(
-  body: Buffer | undefined,
-  receivedSignature: string | string[] | undefined,
-  channelSecret: string
-) {
-  if (!receivedSignature || !body) {
-    return false;
+    response.status(200).send({});
   }
-  const signature = crypto
-    .createHmac("SHA256", channelSecret)
-    .update(body)
-    .digest("base64");
-  return signature === receivedSignature;
-}
+);

@@ -1,12 +1,16 @@
 version: "3"
 
 services:
-  core-server:
-    build:
-      context: ./core-server
-      dockerfile: Dockerfile
-    volumes:
-      - ./core-server:/core-server
-    command: "pnpm start"
+  db:
+    image: postgres:14
+    container_name: postgres
     ports:
-      - "8080:8080"
+      - 5432:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: passw0rd
+
+volumes:
+  db:
