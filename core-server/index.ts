@@ -103,7 +103,12 @@ app.post(
               //
               // スポットの情報をデータベースに書き込む
               //
-              const newSpot = new Spot(spot.name, spot.desc, spot.moredesc);
+              const newSpot = new Spot(
+                spot.id,
+                spot.name,
+                spot.desc,
+                spot.moredesc
+              );
               const savedSpot = await spotRepository.save(newSpot);
               console.log("Saved:", savedSpot);
 
