@@ -2,6 +2,22 @@ import * as line from "@line/bot-sdk";
 import express, { Request } from "express";
 import { load } from "ts-dotenv";
 
+import { v4 as uuidv4 } from "uuid";
+import dbConfig from "./db-config";
+import User from "./entities/user";
+
+const uniqueId = uuidv4();
+
+const userRepository = dbConfig.getRepository(User);
+
+// !todo: ここのuniqueIdはLINEのuserIdになる
+const newUser = new User(uniqueId);
+const savedUser = await userRepository.save(newUser);
+console.log("Saved:", savedUser);
+
+const allUsers = await userRepository.find();
+console.log("Select:", allUsers);
+
 // https://developers.line.biz/ja/docs/messaging-api/receiving-messages/#webhook-event-in-one-on-one-talk-or-group-chat
 interface LineWebhookEvent {
   type: "message" | "unsend" | "follow";
