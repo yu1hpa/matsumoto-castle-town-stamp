@@ -2,12 +2,14 @@
     "spots": [
         {
             "id": "678fd952-4fdb-4440-8711-b6862d3c0370",
+            "img_url": "https://i.gyazo.com/faa8cde17d9beae294f0143f97d4ed39.jpg",
             "name": "松本駅",
             "desc": "松本市の中心部にある駅",
             "moredesc": "この駅は松本で一番大きな駅です"
         },
         {
             "id": "4099d8de-d961-4063-ac3a-cbd75b011029",
+            "img_url": "https://i.gyazo.com/thumb/4032/cfbd949c2b134cbb8fb57c25d0c8184a-heic.jpg",
             "name": "松本城",
             "desc": "松本市にある大きな城です",
             "moredesc": "国宝に指定されています"
