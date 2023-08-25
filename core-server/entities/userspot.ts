@@ -34,6 +34,9 @@ export default class UserSpot {
   @Column({ nullable: true, type: "timestamp" })
   public visitedAt: Date | null;
 
+  @Column({ type: "boolean" })
+  public latest = false;
+
   @CreateDateColumn({ name: "created_at", type: "timestamp", precision: 0 })
   readonly createdAt = new Date();
 
