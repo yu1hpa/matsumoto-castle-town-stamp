@@ -2,6 +2,8 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import cors from "cors";
 import express, { Request, Response } from "express";
 import qs from "qs";
+import UserSpot from "../../../core-server/entities/userspot";
+import dbConfig from "./db-config";
 import { Profile, SubmitData } from "./types";
 
 import "dotenv/config";
@@ -46,6 +48,40 @@ app.post("/api/qrcode-submit", async (req: Request, res: Response) => {
   //
   const profile = await verifyIDToken(id_token, client_id);
   console.log("profile", profile);
+
+  if (!profile) return;
+  const user_id = profile.sub;
+
+  //
+  // userIdで、特定のユーザーのレコードのみ取得
+  // 次に、そのレコードの中でspot_id(QRコード)と一致するレコードを
+  // 取り出して、visitedAtとlatest=true にする
+  //
+  // 一致しないレコードは、latest=false にする
+  //
+  const userspotRepository = dbConfig.getRepository(UserSpot);
+  const userSpot = await userspotRepository.find({
+    where: { userId: user_id },
+  });
+
+  if (userSpot) {
+    userSpot
+      .filter((us) => us.spotId == spot_id)
+      // current userspot
+      .map((cus) => {
+        cus.visitedAt = new Date();
+        cus.latest = true;
+      });
+
+    // 最新のUserSpot以外をfalseで再初期化
+    userSpot
+      .filter((us) => us.spotId != spot_id)
+      .map((cus) => {
+        cus.latest = false;
+      });
+
+    await userspotRepository.save(userSpot);
+  }
 
   return res.status(200).send({
     arrived_at: new Date(),
