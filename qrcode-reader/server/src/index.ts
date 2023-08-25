@@ -63,25 +63,22 @@ app.post("/api/qrcode-submit", async (req: Request, res: Response) => {
   const userSpot = await userspotRepository.find({
     where: { userId: user_id },
   });
+  userSpot
+    .filter((us) => us.spotId == spot_id)
+    // current userspot
+    .map((cus) => {
+      cus.visitedAt = new Date();
+      cus.latest = true;
+    });
 
-  if (userSpot) {
-    userSpot
-      .filter((us) => us.spotId == spot_id)
-      // current userspot
-      .map((cus) => {
-        cus.visitedAt = new Date();
-        cus.latest = true;
-      });
+  // 最新のUserSpot以外をfalseで再初期化
+  userSpot
+    .filter((us) => us.spotId != spot_id)
+    .map((cus) => {
+      cus.latest = false;
+    });
 
-    // 最新のUserSpot以外をfalseで再初期化
-    userSpot
-      .filter((us) => us.spotId != spot_id)
-      .map((cus) => {
-        cus.latest = false;
-      });
-
-    await userspotRepository.save(userSpot);
-  }
+  await userspotRepository.save(userSpot);
 
   return res.status(200).send({
     arrived_at: new Date(),
