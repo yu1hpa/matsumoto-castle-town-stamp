@@ -15,8 +15,8 @@ function App() {
     liff.scanCodeV2().then(async (result) => {
       setQrCodeData(result.value ?? "");
 
-      const accessToken = liff.getAccessToken();
-      if (accessToken) {
+      const IDToken = liff.getIDToken();
+      if (IDToken) {
           const xhr = new XMLHttpRequest();
           xhr.open("POST", SERVER_URL, true);
           xhr.setRequestHeader("Content-Type", "application/json");
@@ -25,7 +25,7 @@ function App() {
               setConsole("終了");
             }
           }
-          xhr.send(JSON.stringify({ "spot_id": result.value, "accesstoken": accessToken }));
+          xhr.send(JSON.stringify({ "spot_id": result.value, "id_token": IDToken }));
       }
     }).catch((e: Error) => {
       setError(`${e}`);
