@@ -1,0 +1,10 @@
+{
+  "overrides": [
+    {
+      "files": "./index.ts",
+      "options": {
+        "quoteProps": "preserve"
+      }
+    }
+  ]
+}
