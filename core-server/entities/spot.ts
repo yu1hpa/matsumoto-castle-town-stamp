@@ -8,14 +8,24 @@ import {
 
 @Entity()
 export default class Spot {
-  constructor(id: string, name: string, desc: string, moredesc: string) {
+  constructor(
+    id: string,
+    img_url: string,
+    name: string,
+    desc: string,
+    moredesc: string
+  ) {
     this.id = id;
+    this.img_url = img_url;
     this.name = name;
     this.desc = desc;
     this.moredesc = moredesc;
   }
   @PrimaryColumn()
   public id: string;
+
+  @Column({ type: "varchar" })
+  public img_url: string;
 
   @Column({ type: "varchar", length: 30 })
   public name: string;
