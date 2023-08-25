@@ -10,6 +10,67 @@ import Spot from "./entities/spot";
 import UserSpot from "./entities/userspot";
 import { Spots } from "./types";
 
+const createSpotInfoFlexMessage = async (
+  spot_name: string,
+  spot_img: string,
+  spot_desc: string,
+  spot_moredesc: string
+): Promise<line.FlexMessage | undefined> => {
+  try {
+    const flexBubble: line.FlexBubble = {
+      "type": "bubble",
+      "hero": {
+        "type": "image",
+        "url": spot_img,
+        "size": "full",
+        "aspectRatio": "20:13",
+        "aspectMode": "cover",
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+          {
+            "type": "text",
+            "text": spot_name,
+            "size": "xl",
+            "margin": "none",
+          },
+          {
+            "type": "text",
+            "text": spot_desc,
+            "size": "md",
+            "color": "#808080",
+          },
+          {
+            "type": "text",
+            "text": spot_moredesc,
+            "size": "xs",
+            "color": "#a9a9a9",
+            "margin": "none",
+          },
+        ],
+        "spacing": "md",
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [],
+        "backgroundColor": "#fafad2",
+      },
+    };
+    const flexMessage: line.FlexMessage = {
+      type: "flex",
+      altText: "スポットの情報を知ることができるメッセージ",
+      contents: flexBubble,
+    };
+
+    return flexMessage;
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 const env = load({
   CHANNEL_SECRET: String,
   CHANNEL_ACCESS_TOKEN: String,
@@ -105,6 +166,7 @@ app.post(
               //
               const newSpot = new Spot(
                 spot.id,
+                spot.img_url,
                 spot.name,
                 spot.desc,
                 spot.moredesc
@@ -130,14 +192,66 @@ app.post(
           );
           break;
         case "message": // event.typeがmessageのとき応答
-          switch (event.message.type) {
-            // 頭に　返信: をつけて、そのまま元のメッセージを返す実装
-            case "text":
-              await client.replyMessage(event.replyToken, {
-                type: "text",
-                text: `返信: ${event.message.text}`,
-              });
-              break;
+          if (event.message.type == "text") {
+            switch (event.message.text) {
+              case "現在のスポットについて知る":
+                //
+                // UserSpotからlatestがtrueのものを探す
+                //
+                const userspotRepository = dbConfig.getRepository(UserSpot);
+                const userSpot = await userspotRepository.findOne({
+                  where: { latest: true },
+                });
+
+                // どれか1つでもQRコードが読み込まれているとき
+                if (userSpot) {
+                  //
+                  // UserSpotテーブルからspotIdを取得し、
+                  // Spot(s)の中から一致するspotIdを探す
+                  // それが直前にQRコードを読み込んだ、情報を知りたいスポット
+                  //
+                  const spot_id = userSpot.spotId;
+                  const spotRepository = dbConfig.getRepository(Spot);
+                  const spot = await spotRepository.findOne({
+                    where: { id: spot_id },
+                  });
+
+                  if (spot) {
+                    //
+                    // 情報を知りたいスポットのテーブルから
+                    // name, img_url, desc, moredesc を取り出し
+                    // spotInfoFlexMessageを生成
+                    //
+                    console.log("Spot", spot);
+                    const spotInfoFlexMessage = await createSpotInfoFlexMessage(
+                      spot.name,
+                      spot.img_url,
+                      spot.desc,
+                      spot.moredesc
+                    );
+
+                    if (!spotInfoFlexMessage) return;
+                    // ユーザーにスポットの情報を送信
+                    await client.replyMessage(
+                      event.replyToken,
+                      spotInfoFlexMessage
+                    );
+                  }
+                  // まだQRコードが読み込まれていないとき
+                } else {
+                  await client.replyMessage(event.replyToken, {
+                    type: "text",
+                    text: "QRコードをスキャンしてください",
+                  });
+                }
+                break;
+              default:
+                await client.replyMessage(event.replyToken, {
+                  type: "text",
+                  text: `返信: ${event.message.text}`,
+                });
+                break;
+            }
           }
           break;
       }
