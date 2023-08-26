@@ -1,14 +1,32 @@
 import * as line from "@line/bot-sdk";
-import express, { Request } from "express";
+import express, { Request, response } from "express";
 import { load } from "ts-dotenv";
 
 import dbConfig from "./db-config";
 import User from "./entities/user";
 
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import fs from "fs";
+import { Readable } from "stream";
 import Spot from "./entities/spot";
 import UserSpot from "./entities/userspot";
 import { Spots } from "./types";
+
+import axios, { AxiosError, AxiosResponse } from "axios";
+
+import dotenv from "dotenv";
+dotenv.config({ path: "../.env" });
+
+console.log(process.env.MINIO_ACCESS_KEY);
+console.log(process.env.MINIO_SECRET_KEY);
+const s3Client = new S3Client({
+  region: "ap-northeast-1",
+  credentials: {
+    accessKeyId: process.env.MINIO_ACCESS_KEY ?? "",
+    secretAccessKey: process.env.MINIO_SECRET_KEY ?? "",
+  },
+  forcePathStyle: true,
+});
 
 const createSpotInfoFlexMessage = async (
   spot_name: string,
@@ -74,6 +92,7 @@ const createSpotInfoFlexMessage = async (
 const env = load({
   CHANNEL_SECRET: String,
   CHANNEL_ACCESS_TOKEN: String,
+  CORE_SERVER_URL: String,
 });
 
 interface CustomRequest extends Request {
@@ -113,7 +132,7 @@ app.post(
     // https://developers.line.biz/ja/docs/messaging-api/receiving-messages/
 
     // !!debug
-    console.log("RECIVED", req.body);
+    console.log("RECIVED", JSON.stringify(req.body));
     if (!req.headers["x-line-signature"] || !req.rawBody) return;
 
     // 署名検証
