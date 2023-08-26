@@ -326,18 +326,34 @@ app.post("/api/pic-save", async (req, res) => {
 
   try {
     const [content, content_length] = await getMessageContent(message_id);
-    const pic_name = uuidv4();
+    const pic_name = `${uuidv4()}.jpeg`;
     await s3Client.send(
       new PutObjectCommand({
         Bucket: process.env.MINIO_BUCKET_NAME,
-        Key: `${pic_name}.jpeg`,
+        Key: pic_name,
         Body: content,
         ContentLength: content_length,
       })
     );
 
-    console.log("[+] Picture Saved:", `${pic_name}.jpeg`);
+    console.log("[+] Picture Saved:", pic_name);
     res.status(200).send({ message: "success" });
+
+    //
+    // UserSpotのlatest=trueであるテーブルを取り出し
+    // そのimgFileNameに pic_name を保存
+    //
+    const userspotRepository = dbConfig.getRepository(UserSpot);
+    // UserSpotからlatestがtrueのものを探す
+    const userSpot = await userspotRepository.findOne({
+      where: { latest: true },
+    });
+
+    if (userSpot) {
+      userSpot.imgFileName = pic_name;
+      const savedUserSpot = await userspotRepository.save(userSpot);
+      console.log("Saved:", savedUserSpot);
+    }
   } catch (err) {
     console.error("ERROR:", err);
   }
