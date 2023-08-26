@@ -30,7 +30,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       until (/usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ACCESS_KEY:-minio} ${MINIO_SECRET_KEY:-minio123}) do echo '...waiting...' && sleep 1; done;
-      /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-mybucket};
+      /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-mybucket} --region=${MINIO_REGION:-ap-northeast-1};
       /usr/bin/mc policy download myminio/${MINIO_BUCKET_NAME:-mybucket};
       exit 0;
       "
