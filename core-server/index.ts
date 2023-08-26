@@ -1,5 +1,5 @@
 import * as line from "@line/bot-sdk";
-import express, { Request, response } from "express";
+import express, { Request } from "express";
 import { load } from "ts-dotenv";
 
 import dbConfig from "./db-config";
@@ -7,7 +7,6 @@ import User from "./entities/user";
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import fs from "fs";
-import { Readable } from "stream";
 import Spot from "./entities/spot";
 import UserSpot from "./entities/userspot";
 import { Spots } from "./types";
@@ -17,15 +16,16 @@ import axios, { AxiosError, AxiosResponse } from "axios";
 import dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 
-console.log(process.env.MINIO_ACCESS_KEY);
-console.log(process.env.MINIO_SECRET_KEY);
+import { v4 as uuidv4 } from "uuid";
+
 const s3Client = new S3Client({
-  region: "ap-northeast-1",
+  region: process.env.MINIO_REGION,
   credentials: {
     accessKeyId: process.env.MINIO_ACCESS_KEY ?? "",
     secretAccessKey: process.env.MINIO_SECRET_KEY ?? "",
   },
   forcePathStyle: true,
+  endpoint: "http://127.0.0.1:9000", // これがないとAWSに向いてしまう
 });
 
 const createSpotInfoFlexMessage = async (
@@ -111,7 +111,6 @@ app.use(
 
 app.listen(8080);
 
-//const lineApi = new LineApi(env.CHANNEL_ACCESS_TOKEN);
 const config = {
   channelAccessToken: env.CHANNEL_ACCESS_TOKEN,
   channelSecret: env.CHANNEL_SECRET,
@@ -124,6 +123,7 @@ app.get("/", (request, response) => {
   response.status(200).send("Hello");
 });
 
+const message_ids = new Array<string>();
 // webhookを受け取るエンドポイント
 app.post(
   "/webhook",
@@ -211,6 +211,9 @@ app.post(
           );
           break;
         case "message": // event.typeがmessageのとき応答
+          // メッセージのIDをすべて保存
+          message_ids.push(event.message.id);
+
           if (event.message.type == "text") {
             switch (event.message.text) {
               case "現在のスポットについて知る":
@@ -265,7 +268,11 @@ app.post(
                 }
                 break;
               case "スポット写真として保存":
-                const message_id = event.message.id;
+                //
+                // 写真が投稿された次に「スポット写真として保存」をしてもらうため
+                // 最新のメッセージIDから一つ前のIDを取得
+                //
+                const message_id = message_ids.at(-2);
                 try {
                   const url = `${env.CORE_SERVER_URL}/api/pic-save`;
 
@@ -307,12 +314,10 @@ app.post(
   }
 );
 
+//
 // 写真をMinIoに保存するためのエンドポイント
-// body: {
-//   message_id: string;
-// }
+//
 app.post("/api/pic-save", async (req, res) => {
-  console.log("body", req.body);
   const message_id = req.body.message_id;
   if (!message_id) {
     console.error("Not Found message_id");
@@ -320,21 +325,57 @@ app.post("/api/pic-save", async (req, res) => {
   }
 
   try {
-    const output = await s3Client.send(
+    const [content, content_length] = await getMessageContent(message_id);
+    const pic_name = uuidv4();
+    await s3Client.send(
       new PutObjectCommand({
         Bucket: process.env.MINIO_BUCKET_NAME,
-        Key: "object-key-1.txt",
-        Body: "Hello",
-        //Body: await getMessageContent(message_id),
+        Key: `${pic_name}.jpeg`,
+        Body: content,
+        ContentLength: content_length,
       })
     );
-    console.log("SUCCESS - Object added:", output);
-    response.status(200).send({});
+
+    console.log("[+] Picture Saved:", `${pic_name}.jpeg`);
+    res.status(200).send({ message: "success" });
   } catch (err) {
     console.error("ERROR:", err);
   }
 });
 
-const getMessageContent = (message_id: string): Promise<Readable> => {
-  return client.getMessageContent(message_id);
+//
+// https://developers.line.biz/ja/reference/messaging-api/#get-content
+// message_idによって、画像データを取得する
+//
+export const getMessageContent = (
+  message_id: string
+): Promise<[Buffer, number]> => {
+  return new Promise((resolve, reject) =>
+    client
+      .getMessageContent(message_id)
+      .then((stream) => {
+        const content: Buffer[] = [];
+        const length: number[] = [];
+
+        // チャンクごとにlengthとbufferを配列に保存
+        stream.on("data", (chunk: string) => {
+          length.push(chunk.length);
+          content.push(Buffer.from(chunk));
+        });
+        // 最後にbufferを一つにし、lengthも計算する
+        stream.on("end", () => {
+          resolve([
+            Buffer.concat(content),
+            length.reduce((acc, cur) => acc + cur, 0),
+          ]);
+        });
+        stream.on("error", (err) => {
+          console.error(err);
+          reject("lineGetContent");
+        });
+      })
+      .catch((err) => {
+        reject(`[-] ${err}`);
+      })
+  );
 };
