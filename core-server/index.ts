@@ -245,6 +245,33 @@ app.post(
                   });
                 }
                 break;
+              case "スポット写真として保存":
+                const message_id = event.message.id;
+                try {
+                  const url = `${env.CORE_SERVER_URL}/api/pic-save`;
+
+                  type FileName = string;
+                  const filename = await axios
+                    .post(
+                      url,
+                      {
+                        message_id: message_id,
+                      },
+                      {
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                      }
+                    )
+                    .then((res: AxiosResponse<FileName>) => res.data)
+                    .catch((e: AxiosError<{ error: string }>) => {
+                      console.log(e.message);
+                    });
+                  console.log(filename);
+                } catch (error) {
+                  throw new Error(`Request error: ${error}`);
+                }
+                break;
               default:
                 await client.replyMessage(event.replyToken, {
                   type: "text",
@@ -260,3 +287,35 @@ app.post(
     response.status(200).send({});
   }
 );
+
+// 写真をMinIoに保存するためのエンドポイント
+// body: {
+//   message_id: string;
+// }
+app.post("/api/pic-save", async (req, res) => {
+  console.log("body", req.body);
+  const message_id = req.body.message_id;
+  if (!message_id) {
+    console.error("Not Found message_id");
+    return;
+  }
+
+  try {
+    const output = await s3Client.send(
+      new PutObjectCommand({
+        Bucket: process.env.MINIO_BUCKET_NAME,
+        Key: "object-key-1.txt",
+        Body: "Hello",
+        //Body: await getMessageContent(message_id),
+      })
+    );
+    console.log("SUCCESS - Object added:", output);
+    response.status(200).send({});
+  } catch (err) {
+    console.error("ERROR:", err);
+  }
+});
+
+const getMessageContent = (message_id: string): Promise<Readable> => {
+  return client.getMessageContent(message_id);
+};
