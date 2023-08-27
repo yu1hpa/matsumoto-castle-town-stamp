@@ -37,26 +37,34 @@ const s3Client = new S3Client({
 });
 
 app.post("/images", async (req, res) => {
-  const response = await s3Client.send(
-    new ListObjectsV2Command({
+  try {
+    const listObjectsParams = {
       Bucket: process.env.MINIO_BUCKET_NAME,
-    })
-  );
-  const datas = response.Contents || [];
+    };
 
-  const concatenatedImages = datas.map(async (data) => {
-    const command = new GetObjectCommand({
-      Bucket: process.env.MINIO_BUCKET_NAME,
-      Key: data.Key,
-    });
+    const response = await s3Client.send(
+      new ListObjectsV2Command(listObjectsParams)
+    );
+    const datas = response.Contents || [];
 
-    const d = await s3Client.send(command);
-    if (!d) return;
-    const buf = await streamToBuffer(d.Body as Readable);
-    return buf;
+    console.log(datas);
+    res.status(200).send({ images: datas });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("An error occurred");
+  }
+});
+
+app.get("/images/:key", async (req, res) => {
+  const command = new GetObjectCommand({
+    Bucket: process.env.MINIO_BUCKET_NAME,
+    Key: req.params.key,
   });
 
-  res.status(200).send({ images: concatenatedImages });
+  const d = await s3Client.send(command);
+  if (!d) return;
+  const buf = await streamToBuffer(d.Body as Readable);
+  res.status(200).send(buf);
 });
 
 async function streamToBuffer(stream: Readable): Promise<Uint8Array> {
