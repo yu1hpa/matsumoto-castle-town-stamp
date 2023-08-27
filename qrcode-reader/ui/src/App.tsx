@@ -27,7 +27,7 @@ function App() {
           xhr.setRequestHeader("Content-Type", "application/json");
           xhr.onreadystatechange = () => {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-              setConsole("終了");
+              setConsole("正常に読み取りました。QRコードリーダーを閉じてください");
             }
           }
           xhr.send(JSON.stringify({ "spot_id": result.value, "id_token": IDToken }));
@@ -39,11 +39,12 @@ function App() {
 
   return (
     <div className="App">
-      <button onClick={handleScan}>Scan QR Code</button>
-      <h1>{qrCodeData}</h1>
-      <p>url: {SERVER_URL}</p>
-      <p>error: {error}</p>
-      <p>console: {console}</p>
+      <div>
+        <button onClick={handleScan}>Scan QR Code</button>
+      </div>
+      <div>
+        <h3>{console}</h3>
+      </div>
     </div>
   );
 }
