@@ -11,11 +11,10 @@ import Spot from "./entities/spot";
 import UserSpot from "./entities/userspot";
 import { Spots } from "./types";
 
-import axios, { AxiosError, AxiosResponse } from "axios";
-
 import dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 
+import axios, { AxiosResponse } from "axios";
 import { v4 as uuidv4 } from "uuid";
 
 const s3Client = new S3Client({
@@ -280,30 +279,46 @@ app.post(
                 // 写真が投稿された次に「スポット写真として保存」をしてもらうため
                 // 最新のメッセージIDから一つ前のIDを取得
                 //
-                const message_id = message_ids.at(-2);
-                try {
-                  const url = `${env.CORE_SERVER_URL}/api/pic-save`;
+                const faildMessage =
+                  "正常に保存できませんでした。先にトーク画面に写真を投稿したあとにメニューをタップする必要があります";
 
-                  type FileName = string;
-                  const filename = await axios
-                    .post(
-                      url,
-                      {
-                        message_id: message_id,
-                      },
-                      {
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                      }
-                    )
-                    .then((res: AxiosResponse<FileName>) => res.data)
-                    .catch((e: AxiosError<{ error: string }>) => {
-                      console.log(e.message);
-                    });
-                  console.log(filename);
-                } catch (error) {
-                  throw new Error(`Request error: ${error}`);
+                const successedMessage = `投稿された写真を保存しました。${env.MEMORIES_GALLERY_URL} から確認できます。`;
+
+                const message_id = message_ids.at(-2);
+                if (!message_id) {
+                  await client.replyMessage(event.replyToken, {
+                    type: "text",
+                    text: faildMessage,
+                  });
+                  return;
+                }
+                const url = `${env.CORE_SERVER_URL}/api/pic-save`;
+
+                type FileName = string;
+                const responseSavedPhoto = await axios.post(
+                  url,
+                  {
+                    message_id: message_id,
+                  },
+                  {
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                  }
+                );
+                if (responseSavedPhoto.status != 200) {
+                  await client.replyMessage(event.replyToken, {
+                    type: "text",
+                    text: faildMessage,
+                  });
+                  return;
+                } else if (responseSavedPhoto.status == 200) {
+                  const data: AxiosResponse<FileName> = responseSavedPhoto.data;
+                  await client.replyMessage(event.replyToken, {
+                    type: "text",
+                    text: successedMessage,
+                  });
+                  return data;
                 }
                 break;
               default:
