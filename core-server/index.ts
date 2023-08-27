@@ -206,9 +206,16 @@ app.post(
               console.log("Saved:", savedUserSpot);
             })
             // !debug-info
-          ).then(async () =>
-            console.log("Select:", await spotRepository.find())
-          );
+          ).then(async () => {
+            const appIntroductionText =
+              "本アプリは、松本城下町を舞台にしたスタンプラリーを提供します。指定されたスポットへ行き、そこにあるQRコードを読み込むことで、スタンプを押したことになります。その他の機能として、QRコードを読み込んだスポットの情報の提供・思い出の写真を一枚保存・みんなが投稿した思い出の写真を見ることができるWebページが用意されています";
+
+            await client.replyMessage(event.replyToken, {
+              type: "text",
+              text: appIntroductionText,
+            });
+            console.log("Select:", await spotRepository.find());
+          });
           break;
         case "message": // event.typeがmessageのとき応答
           // メッセージのIDをすべて保存
