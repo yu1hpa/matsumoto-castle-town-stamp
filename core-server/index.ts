@@ -93,6 +93,7 @@ const env = load({
   CHANNEL_SECRET: String,
   CHANNEL_ACCESS_TOKEN: String,
   CORE_SERVER_URL: String,
+  MEMORIES_GALLERY_URL: String,
 });
 
 interface CustomRequest extends Request {
@@ -267,6 +268,13 @@ app.post(
                   });
                 }
                 break;
+              case "思い出を見る":
+                await client.replyMessage(event.replyToken, {
+                  type: "text",
+                  text: `${env.MEMORIES_GALLERY_URL}`,
+                });
+
+                https: break;
               case "スポット写真として保存":
                 //
                 // 写真が投稿された次に「スポット写真として保存」をしてもらうため
