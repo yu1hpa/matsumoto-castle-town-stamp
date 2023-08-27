@@ -1,8 +1,13 @@
 import liff from "@line/liff";
 import { useState } from "react";
 import "./App.css";
+const HOST = import.meta.env.SERVER_URL ?? "https://d7e3-2405-1200-400-4c00-e9af-89a6-d7dc-9b0.ngrok-free.app";
 
-const HOST = "https://bb27-160-237-151-193.ngrok-free.app";
+if (!HOST) {
+  console.error("Not Found env.HOST");
+}
+console.log(HOST);
+
 const SERVER_URL = `${HOST}/api/qrcode-submit`
 
 function App() {
