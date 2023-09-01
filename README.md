@@ -2,6 +2,8 @@
 
 ![](./docs/main-slide.png)
 
+スライドは、[Slide](https://docs.google.com/presentation/d/1nlC-JQfvviIHuZZxuKdm6oskrPqfomtJFHKBVQ_Zeog/edit?usp=sharing) からご覧ください
+
 ## 技術スタック
 
 コアサーバー
