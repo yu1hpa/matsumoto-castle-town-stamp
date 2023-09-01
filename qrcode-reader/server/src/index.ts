@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import cors from "cors";
 import express, { Request, Response } from "express";
 import qs from "qs";
-import UserSpot from "../../../core-server/entities/userspot";
+import UserSpot from "../../../core-server/src/entities/userspot";
 import dbConfig from "./db-config";
 import { Profile, SubmitData } from "./types";
 

@@ -1,5 +1,5 @@
 import { DataSource } from "typeorm";
-import UserSpot from "../../../core-server/entities/userspot";
+import UserSpot from "../../../core-server/src/entities/userspot";
 const dbConfig = new DataSource({
   type: "postgres",
   host: "0.0.0.0",

@@ -3,11 +3,12 @@ import express, { Request } from "express";
 import { load } from "ts-dotenv";
 
 import dbConfig from "./db-config";
-import User from "./entities/user";
 
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import fs from "fs";
+
 import Spot from "./entities/spot";
+import User from "./entities/user";
 import UserSpot from "./entities/userspot";
 import { Spots } from "./types";
 
