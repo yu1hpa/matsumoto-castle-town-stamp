@@ -318,7 +318,6 @@ app.post(
                     type: "text",
                     text: faildMessage,
                   });
-                  return;
                 } else if (responseSavedPhoto.status == 200) {
                   const data: AxiosResponse<FileName> = responseSavedPhoto.data;
                   await client.replyMessage(event.replyToken, {
@@ -385,6 +384,7 @@ app.post("/api/pic-save", async (req, res) => {
       console.log("Saved:", savedUserSpot);
     }
   } catch (err) {
+    res.status(400).send({ message: err });
     console.error("ERROR:", err);
   }
 });
