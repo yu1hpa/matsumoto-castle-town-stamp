@@ -1,7 +1,7 @@
 {
   "overrides": [
     {
-      "files": "./index.ts",
+      "files": "./src/index.ts",
       "options": {
         "quoteProps": "preserve"
       }

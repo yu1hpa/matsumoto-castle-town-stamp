@@ -1,4 +1,8 @@
 import { DataSource } from "typeorm";
+import Spot from "./entities/spot";
+import User from "./entities/user";
+import UserSpot from "./entities/userspot";
+
 const dbConfig = new DataSource({
   type: "postgres",
   host: "0.0.0.0",
@@ -8,7 +12,7 @@ const dbConfig = new DataSource({
   database: "admin",
   synchronize: true,
   logging: false,
-  entities: ["entities/*.ts"],
+  entities: [User, Spot, UserSpot],
 });
 
 await dbConfig
